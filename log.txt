@@ -1,1 +1,24 @@
 Something is in the log...
+ERROR no "applebees" key on scott.json 1563231187971
+Scott 1563231872610
+red 1563289114386
+testing in scott.json at 1563293169769
+testing in scott.json at 1563293204491
+testing in scott.json at 1563293673834
+got Andrew in andrew.json at 1563293843676
+ERROR no "testing" key on scott.json undefined in undefined at 1563294124256
+file does not exist undefined in undefined at 1563296104091
+File ALREADY exists undefined in undefined at 1563297503893
+File ALREADY exists undefined in undefined at 1563297564624
+ERROR no "testing" key on scott.json  in  at 1563297921711
+set  in scott.json at 1563298057883
+set value in scott.json at 1563298096808
+removed testing in scott.json at 1563298118144
+File ALREADY exists  in  at 1563298138324
+File ALREADY exists  in  at 1563298170959
+File ALREADY exists undefined in undefined at 1563298329822
+file does not exist  in  at 1563298785142
+file does not exist  in  at 1563298801174
+file does not exist  in  at 1563298913825
+set testvalue in scott.json at 1563300772771
+set scoot in scott.json at 1563302183732
