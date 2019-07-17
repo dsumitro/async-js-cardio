@@ -15,61 +15,93 @@ ex after running delete('user.json'):
 
 Errors should also be logged (preferably in a human-readable format)
 */
+
 /**
- * logs all requests in log.txt
- * @param {string} value
+ * Resets the database (does not touch added files)
  */
-function log(action, file = '', value = '') {
-  return fs.appendFile(
-    'log.txt',
-    `${action} ${value} in ${file} at ${Date.now()}\n`
+function reset() {
+  const andrew = fs.writeFile(
+    'db/andrew.json',
+    JSON.stringify({
+      firstname: 'Andrew',
+      lastname: 'Maney',
+      email: 'amaney@talentpath.com',
+    })
   );
+  const scott = fs.writeFile(
+    'db/scott.json',
+    JSON.stringify({
+      firstname: 'Scott',
+      lastname: 'Roberts',
+      email: 'sroberts@talentpath.com',
+      username: 'scoot',
+    })
+  );
+  const post = fs.writeFile(
+    'db/post.json',
+    JSON.stringify({
+      title: 'Async/Await lesson',
+      description: 'How to write asynchronous JavaScript',
+      date: 'July 15, 2019',
+    })
+  );
+  const log = fs.writeFile('./log.txt', '');
+  return Promise.all([andrew, scott, post, log]);
 }
 
 /**
- * Logs out the value of object[key]
+ * Writes `value` to the log
+ * @param {string} value
+ */
+function log(value) {
+  return fs.appendFile('log.txt', `${value} ${Date.now()}\n`);
+}
+
+/**
+ * Reads from json `file` and returns parsed object
+ * @param {string} file
+ * @returns Object
+ */
+async function getObject(file) {
+  return fs.readFile(`db/${file}`).then(data => JSON.parse(data));
+}
+
+async function writeObject(file, obj) {
+  return fs.writeFile(`db/${file}`, JSON.stringify(obj));
+}
+
+/**
+ * Logs the value of object[key]
  * @param {string} file
  * @param {string} key
  */
-// function get (file, key){
-// readfile
-// fs.readfile(`./${file}`)
-// handle promise and get back data
-// parse data from string into JSON
-// use key to get value
-// append the log file with the above value
-// }
-// using promises
-function get(file, key) {
-  return fs
-    .readFile(file, 'utf-8')
-    .then(data => {
-      const parsed = JSON.parse(data);
-      // bracket notation because if using dot notation.
-      // it looks for the key called "key"
-      const value = parsed[key];
-      if (!value) return log(`ERROR no "${key}" key on ${file}`);
-      return log('got', file, value);
-    })
-    .catch(err => log(`ERROR no such file or directory ${file}`));
-}
-// using async
-// is underlined because apparently not used?
-async function getAsync(file, key) {
+async function get(file, key) {
+  /* Async/await approach */
   try {
     // 1. read file
-    // 2. handle data
-    const data = await fs.readFile(file, 'utf8');
-    // 3. parse data from string --> JSON
+    // 2. handle promise -> data
+    const data = await fs.readFile(`db/${file}`, 'utf8');
+    // 3. parse data from string -> JSON
     const parsed = JSON.parse(data);
     // 4. use the key to get the value at object[key]
     const value = parsed[key];
-    if (!value) return log(`ERROR no "${key}" key on ${file}`);
-    // 5. append the log file with the value
-    return log('got', file, value);
+    // 5. append the log file with the above value
+    if (!value) return log(`ERROR ${key} invalid key on ${file}`);
+    return log(value);
   } catch (err) {
     return log(`ERROR no such file or directory ${file}`);
   }
+  /* Promise-based approach
+  return fs
+    .readFile(`db/${file}`, 'utf8')
+    .then(data => {
+      const parsed = JSON.parse(data);
+      const value = parsed[key];
+      if (!value) return log(`ERROR ${key} invalid key on ${file}`);
+      return log(value);
+    })
+    .catch(err => log(`ERROR no such file or directory ${file}`));
+    */
 }
 
 /**
@@ -78,23 +110,15 @@ async function getAsync(file, key) {
  * @param {string} key
  * @param {string} value
  */
-function set(file, key, value) {
-  return (
-    fs
-      // reads
-      .readFile(file, 'utf8')
-      .then(data => {
-        // parse
-        const parsed = JSON.parse(data);
-        // adds property the converts back to JSON format
-        parsed[key] = value;
-        const newObj = JSON.stringify(parsed);
-        return fs.writeFile(file, newObj);
-      })
-      // TODO: adjust log function
-      .then(() => log(`${key}: ${value} set in ${file}`))
-      .catch(() => log(`ERROR no such file or directory ${file}`))
-  );
+async function set(file, key, value) {
+  try {
+    const obj = await getObject(file); // JSON.parse(await fs.readFile(`db/${file}`));
+    obj[key] = value;
+    await writeObject(file, obj);
+    return log(`${key}: ${value} successfully added to ${file}`);
+  } catch (err) {
+    return log(`ERROR writing to setting ${key}: ${value} on ${file}`);
+  }
 }
 
 /**
@@ -102,20 +126,15 @@ function set(file, key, value) {
  * @param {string} file
  * @param {string} key
  */
-// ESLint has a convert to async function?
-function remove(file, key) {
-  return fs
-    .readFile(file, 'utf8')
-    .then(data => {
-      const parsed = JSON.parse(data);
-      // not sure if needed error handle
-      if (!parsed[key]) return log(`ERROR no "${key}" key on ${file}`);
-      delete parsed[key];
-      const newObj = JSON.stringify(parsed);
-      fs.writeFile(file, newObj);
-      return log('removed', file, key);
-    })
-    .catch(err => log(`ERROR no such file or directory ${file}`));
+async function remove(file, key) {
+  try {
+    const obj = await getObject(file);
+    delete obj[key];
+    await writeObject(file, obj);
+    return log(`${key} successfully deleted from ${file}`);
+  } catch (err) {
+    return log(`ERROR deleteing ${key} on ${file}`);
+  }
 }
 
 /**
@@ -123,32 +142,27 @@ function remove(file, key) {
  * Gracefully errors if the file does not exist.
  * @param {string} file
  */
-function deleteFile(file) {
-  return (
-    fs
-      // TODO: Figure out why it will not log
-      // Most likely asynchonicity?
-      // take return log out and but it in a then?
-      // maybe fixed
-      .unlink(file)
-      .then(() => {
-        log(`${file} was delete`);
-      })
-      .catch(() => log('file does not exist'))
-  );
+async function deleteFile(file) {
+  try {
+    await fs.unlink(`./db/${file}`);
+    return log(`${file} succesfully deleted`);
+  } catch (err) {
+    return log(`ERROR: ${file} does not exist`);
+  }
 }
+
 /**
  * Creates file with an empty object inside.
  * Gracefully errors if the file already exists.
  * @param {string} file JSON filename
  */
-function createFile(file) {
-  return fs
-    .access(`${file}`)
-    .then(() => log(`Cannot create file, ${file}, already exists`))
-    .catch(() => fs.writeFile(`${file}`, '{}')
-    .then(() => log('Succefully created ${file}'));
-  // return fs.writeFile(file, JSON.stringify({}));
+async function createFile(file) {
+  try {
+    await writeObject(file, {});
+    return log(`${file} succesfully created`);
+  } catch (err) {
+    return log(`ERROR: ${file} not created`);
+  }
 }
 
 /**
@@ -169,8 +183,24 @@ function createFile(file) {
  *    }
  * }
  */
-function mergeData() {
-  
+async function mergeData() {
+  try {
+    const files = await fs.readdir('./db');
+    const datas = await Promise.all(
+      files.map(file => fs.readFile(`db/${file}`))
+    );
+    const merged = datas.reduce(
+      (accum, data, i) => ({
+        ...accum,
+        [files[i].split('.')[0]]: JSON.parse(data),
+      }),
+      {}
+    );
+    await writeObject('merge.json', merged);
+    return log('Merged successfully wrote');
+  } catch (err) {
+    return log('ERROR merged unsuccessfully wrote');
+  }
 }
 
 /**
@@ -205,14 +235,13 @@ function difference(fileA, fileB) {}
 
 module.exports = {
   get,
-  getAsync,
   set,
   remove,
   deleteFile,
-  deleteFileAsync,
   createFile,
   mergeData,
   union,
   intersect,
   difference,
+  reset,
 };
